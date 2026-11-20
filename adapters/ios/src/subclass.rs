@@ -124,7 +124,32 @@ unsafe extern "C" fn accessibility_elements(this: &UIView, _cmd: Sel) -> *mut NS
     let Some(associated) = associated_object(this) else {
         return unsafe { msg_send![super(this, prev_class(this)), accessibilityElements] };
     };
-    associated.ivars().adapter.accessibility_elements()
+    let accesskit = associated.ivars().adapter.accessibility_elements();
+    let explicit: Option<Retained<NSArray<NSObject>>> = unsafe {
+        msg_send_id![
+            super(this, associated.ivars().prev_class),
+            accessibilityElements
+        ]
+    };
+    let mut native = match explicit {
+        Some(elements) => elements.to_vec_retained(),
+        None => {
+            // UIKit normally discovers native subviews when the container returns nil.
+            // Listing them alongside AccessKit elements preserves their own AX subtrees.
+            this.subviews()
+                .iter_retained()
+                .filter(|view| !view.isHidden())
+                .map(|view| Retained::into_super(Retained::into_super(view)))
+                .collect()
+        }
+    };
+    if native.is_empty() {
+        return accesskit;
+    }
+    if let Some(elements) = unsafe { accesskit.as_ref() } {
+        native.extend(elements.iter_retained());
+    }
+    Retained::autorelease_return(NSArray::from_vec(native))
 }
 
 // UIAccessibilityHitTest methods

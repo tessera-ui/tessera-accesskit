@@ -354,6 +354,18 @@ impl Adapter {
             .l()
             .unwrap();
 
+        if virtual_view_id == HOST_VIEW_ID {
+            // A SurfaceView can expose an embedded native accessibility hierarchy.
+            // Retain that hierarchy when adding the AccessKit virtual children.
+            env.call_method(
+                host,
+                "onInitializeAccessibilityNodeInfo",
+                "(Landroid/view/accessibility/AccessibilityNodeInfo;)V",
+                &[(&node_info).into()],
+            )
+            .unwrap();
+        }
+
         let package_name = get_package_name(env, host);
         env.call_method(
             &node_info,
