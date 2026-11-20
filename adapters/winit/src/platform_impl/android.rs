@@ -26,7 +26,7 @@ impl Adapter {
     ) -> Self {
         let app = event_loop.android_app();
         let vm = unsafe { JavaVM::from_raw(app.vm_as_ptr() as *mut _) }.unwrap();
-        let mut env = vm.get_env().unwrap();
+        let mut env = vm.attach_current_thread().unwrap();
         let activity = unsafe { JObject::from_raw(app.activity_as_ptr() as *mut _) };
         let view = env
             .get_field(
